@@ -9,10 +9,6 @@ from PIL import Image
 # Configuración de la página
 st.set_page_config(page_title="Evaluador de Trabajos", page_icon="📝", layout="wide")
 
-# Configuración de Gemini AI (con API Key incluida)
-genai.configure(api_key="AIzaSyAtsIgmN8GWnuy-tUhPIt9odwouOvMuujc")
-model = genai.GenerativeModel('gemini-1.5-flash')  # Modelo actualizado
-
 # Título de la aplicación
 st.title("📝 Evaluador de Trabajos con Gemini AI")
 st.markdown("""
@@ -23,6 +19,14 @@ una evaluación automatizada con retroalimentación detallada usando Gemini AI.
 # Sidebar para configuración
 with st.sidebar:
     st.header("Configuración")
+    
+    # Campo para ingresar la API Key
+    api_key = st.text_input("Ingresa tu API Key de Gemini AI", type="password", 
+                          help="Puedes obtener una API Key en https://aistudio.google.com/app/apikey")
+    
+    # Opción para mostrar calificación numérica
+    mostrar_calificacion = st.checkbox("Mostrar calificación numérica", value=False,
+                                     help="Activa esta opción para incluir una puntuación del 1 al 10 en la evaluación")
     
     # Sliders para ajustar el comportamiento de la IA
     temperature = st.slider("Creatividad de las evaluaciones", 0.0, 1.0, 0.5, help="Valores más altos = respuestas más creativas pero menos precisas")
@@ -64,30 +68,61 @@ def process_student_file(file):
 
 # Función para evaluar con Gemini
 def evaluate_with_gemini(criteria, student_work, student_name=""):
-    prompt = f"""
-    Eres un profesor universitario experto en evaluación de trabajos académicos. 
-    A continuación te proporciono los criterios de evaluación y el trabajo de un estudiante o docente.
+    # Verificar que la API Key esté configurada
+    if 'api_key' not in st.session_state or not st.session_state.api_key:
+        return "Error: Por favor ingresa una API Key válida en la barra lateral"
     
-    **CRITERIOS DE EVALUACIÓN:**
-    {criteria}
-    
-    **TRABAJO DEL ESTUDIANTE O DOCENTE {student_name.upper() if student_name else ''}:**
-    {student_work}
-    
-    Proporciona una evaluación detallada que incluya:
-    
-    
-    1. **PUNTOS FUERTES** (1-3 aspectos bien desarrollados)
-    2. **ÁREAS DE MEJORA** (1-3 aspectos a mejorar con sugerencias concretas)
-    3. **COMENTARIOS FINALES** (retroalimentación constructiva y motivadora)
-    
-    Usa un tono profesional pero cercano, destacando los logros y ofreciendo guía para mejorar.
-    Organiza la respuesta con encabezados claros y bullet points para mejor legibilidad. La retroalimentación constructiva y motivadora sea máximo 200 caracteres.
-   
-    """
-    
+    # Construir el prompt según si se solicita calificación numérica o no
+    if st.session_state.mostrar_calificacion:
+        prompt = f"""
+        Eres un profesor universitario experto en evaluación de trabajos académicos. 
+        A continuación te proporciono los criterios de evaluación y el trabajo de un estudiante o docente.
+        
+        **CRITERIOS DE EVALUACIÓN:**
+        {criteria}
+        
+        **TRABAJO DEL ESTUDIANTE O DOCENTE {student_name.upper() if student_name else ''}:**
+        {student_work}
+        
+        Proporciona una evaluación detallada que incluya:
+        
+        1. **CALIFICACIÓN NUMÉRICA** (una puntuación del 1 al 10 basada en los criterios)
+        2. **PUNTOS FUERTES** (1-3 aspectos bien desarrollados)
+        3. **ÁREAS DE MEJORA** (1-3 aspectos a mejorar con sugerencias concretas)
+        4. **COMENTARIOS FINALES** (retroalimentación constructiva y motivadora)
+        
+        Usa un tono profesional pero cercano, destacando los logros y ofreciendo guía para mejorar.
+        Organiza la respuesta con encabezados claros y bullet points para mejor legibilidad.
+        La calificación numérica debe aparecer primero, destacada entre asteriscos como **7/10**.
+        La retroalimentación constructiva y motivadora sea máximo 200 caracteres.
+        """
+    else:
+        prompt = f"""
+        Eres un profesor universitario experto en evaluación de trabajos académicos. 
+        A continuación te proporciono los criterios de evaluación y el trabajo de un estudiante o docente.
+        
+        **CRITERIOS DE EVALUACIÓN:**
+        {criteria}
+        
+        **TRABAJO DEL ESTUDIANTE O DOCENTE {student_name.upper() if student_name else ''}:**
+        {student_work}
+        
+        Proporciona una evaluación detallada que incluya:
+        
+        1. **PUNTOS FUERTES** (1-3 aspectos bien desarrollados)
+        2. **ÁREAS DE MEJORA** (1-3 aspectos a mejorar con sugerencias concretas)
+        3. **COMENTARIOS FINALES** (retroalimentación constructiva y motivadora)
+        
+        Usa un tono profesional pero cercano, destacando los logros y ofreciendo guía para mejorar.
+        Organiza la respuesta con encabezados claros y bullet points para mejor legibilidad.
+        La retroalimentación constructiva y motivadora sea máximo 200 caracteres.
+        """
     
     try:
+        # Configurar el modelo con la API Key actual
+        genai.configure(api_key=st.session_state.api_key)
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        
         response = model.generate_content(
             prompt,
             generation_config=genai.types.GenerationConfig(
@@ -99,6 +134,14 @@ def evaluate_with_gemini(criteria, student_work, student_name=""):
         return response.text
     except Exception as e:
         return f"Error al evaluar: {str(e)}"
+
+# Almacenar la API Key y preferencias en session_state cuando se ingresan
+if api_key:
+    st.session_state.api_key = api_key
+if 'mostrar_calificacion' not in st.session_state:
+    st.session_state.mostrar_calificacion = mostrar_calificacion
+else:
+    st.session_state.mostrar_calificacion = mostrar_calificacion
 
 # Interfaz principal
 tab1, tab2 = st.tabs(["📋 Subir Criterios", "🧑‍🎓 Evaluar Trabajos"])
@@ -126,6 +169,8 @@ with tab2:
     
     if 'criteria_text' not in st.session_state:
         st.warning("⚠️ Por favor sube primero los criterios de evaluación en la pestaña 'Subir Criterios'")
+    elif 'api_key' not in st.session_state or not st.session_state.api_key:
+        st.warning("⚠️ Por favor ingresa tu API Key de Gemini AI en la barra lateral")
     else:
         student_files = st.file_uploader(
             "Sube los trabajos de los estudiantes (PDF o Word)", 
@@ -160,6 +205,16 @@ with tab2:
                             with col2:
                                 st.subheader("📝 Evaluación Automática")
                                 evaluation = evaluate_with_gemini(st.session_state.criteria_text, student_text, student_name)
+                                
+                                # Si se solicita calificación numérica, resaltarla
+                                if st.session_state.mostrar_calificacion:
+                                    st.markdown("### Calificación")
+                                    # Buscar el patrón **X/10** en la respuesta
+                                    if "**" in evaluation and "/10" in evaluation:
+                                        calificacion = evaluation.split("**")[1]
+                                        st.metric(label="Puntuación", value=calificacion)
+                                        st.markdown("---")
+                                
                                 st.markdown(evaluation)
                                 
                                 # Opción para descargar la evaluación
