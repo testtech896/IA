@@ -13,7 +13,7 @@ st.set_page_config(page_title="Evaluador de Trabajos", page_icon="📝", layout=
 st.title("📝 Evaluador de Trabajos con Gemini AI")
 st.markdown("""
 Sube los criterios de evaluación en PDF y los trabajos de los alumnos (PDF o Word) para obtener 
-una evaluación automatizada con retroalimentación detallada usando Gemini AI.
+una evaluación automatizada con retroalimentación detallada usando IA.
 """)
 
 # Sidebar para configuración
