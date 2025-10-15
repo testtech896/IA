@@ -121,7 +121,7 @@ def evaluate_with_gemini(criteria, student_work, student_name=""):
     try:
         # Configurar el modelo con la API Key actual
         genai.configure(api_key=st.session_state.api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         
         response = model.generate_content(
             prompt,
