@@ -123,13 +123,21 @@ def evaluate_with_gemini(criteria, student_work, student_name=""):
         genai.configure(api_key=st.session_state.api_key)
         model = genai.GenerativeModel('gemini-2.5-flash')
         
+        safety_settings = [
+            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+        ]
+        
         response = model.generate_content(
             prompt,
             generation_config=genai.types.GenerationConfig(
                 temperature=temperature,
                 max_output_tokens=max_tokens,
                 top_p=0.9
-            )
+            ),
+            safety_settings=safety_settings
         )
         return response.text
     except Exception as e:
