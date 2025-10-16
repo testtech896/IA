@@ -121,7 +121,7 @@ def evaluate_with_gemini(criteria, student_work, student_name=""):
     try:
         # Configurar el modelo con la API Key actual
         genai.configure(api_key=st.session_state.api_key)
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel('gemini-1.5-flash')
         
         safety_settings = [
             {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
@@ -139,7 +139,14 @@ def evaluate_with_gemini(criteria, student_work, student_name=""):
             ),
             safety_settings=safety_settings
         )
-        return response.text
+        
+        # Verificar si la respuesta tiene contenido antes de acceder a .text
+        if response.parts:
+            return response.text
+        else:
+            # Si no hay contenido, la respuesta fue bloqueada. Devolver el feedback.
+            return f"Error: La respuesta fue bloqueada por la API. Razón: {response.prompt_feedback}"
+            
     except Exception as e:
         return f"Error al evaluar: {str(e)}"
 
